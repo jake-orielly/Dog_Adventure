@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<style>
+canvas {
+    border: 1px solid #d3d3d3;
+    background-color: #f1f1f1;
+}
+</style>
+</head>
+<body onload="startGame()" oncontextmenu="return false">
+<script>
+
+var player;
+//var enemy;
+var spaces = [];
+var boardX = 640;
+var boardY = 640;
+var movedCount = 0;
+var moveDelay = 10;
+var playerMovement = 3;
+var selected = false;
+var grassMoveablePic = "grassMoveable.png";
+var board = [];
+
+var terrainDefault = ["grass.png", "trees.png"];
+var terrainSelected = ["grassSelected.png", "treesSelected.png"];
+var terrainMoveable = ["grassMoveable.png", "treesMoveable.png"];
+var terrain = [terrainDefault, terrainSelected, terrainMoveable];
+
+function startGame() {
+	player = new component(50, 50, "pepper.png", 0 + ((64-50)/2), 0 + ((64-50)/2), "player");
+	//enemy = new component(500, 500, "pepper.png", 0 + ((64-50)/2), 0 + ((64-50)/2), "enemy");
+	
+	mapTerrain();
+	
+	for (var i = 0; i < 10; i++) {
+		spaces[i] = [];
+		for (var j = 0; j < 10; j++) {
+			//if (i + j > 3 && i + j < 6) {
+				spaces[i][j] = generateSpace(i,j);
+			/*
+				spaces[i][j] = new component(64, 64, "trees.png", 64*i, 64*j, "" + i + "," + j);
+			}
+			
+			else {
+				spaces[i][j] = new component(64, 64, "grass.png", 64*i, 64*j, "" + i + "," + j);
+			}*/
+		}
+	}
+	
+	gameArea.start();
+}
+
+function mapTerrain() {
+	for (var i = 0; i < 10; i++) {
+		board[i] = [];
+		for (var j = 0; j < 10; j++) {
+			board[i][j] = 0;
+		}
+	}
+	
+	board[3][3] = 1;
+	board[3][4] = 1;
+	board[4][3] = 1;
+	board[4][4] = 1;
+	board[4][5] = 1;
+	
+	board[8][8] = 1;
+	board[8][9] = 1;
+	board[9][8] = 1;
+	
+}
+
+function generateSpace (x,y) {
+	var image = getImage(x,y,0);
+	
+	var space = new component(64, 64, image, 64*x, 64*y, "" + x + "," + y);
+	return space;
+}
+
+var gameArea = {
+    canvas : document.createElement("canvas"),
+    start : function() {
+        this.canvas.width = boardX;
+        this.canvas.height = boardY;
+        this.context = this.canvas.getContext("2d");
+        document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+		this.interval = setInterval(updateGameArea, 20);
+		window.addEventListener("mouseup", clicked);
+		
+    },
+    clear : function() {
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+}
+
+function component(width, height, color, x, y, id) {
+	this.id = id;
+    this.width = width;
+    this.height = height;
+	this.speedX = 0;
+    this.speedY = 0;
+    this.x = x;
+    this.y = y;
+	this.image = new Image();
+	this.image.src = color;
+    this.moveable = false;
+	
+    this.update = function() {
+		ctx = gameArea.context;
+		ctx.drawImage(this.image, 
+		this.x, 
+		this.y,
+		this.width, this.height);
+    }
+	
+    this.newPos = function() {
+		this.x += this.speedX;
+		this.y += this.speedY;        
+	}
+} 
+
+function updateGameArea() {
+    gameArea.clear();
+	stopMoving(player); //remove?
+
+	if (movedCount > 0) {
+		movedCount--;
+	}
+	
+	for (var i = 0; i < 10; i++) {
+		for (var j = 0; j < 10; j++) {
+			spaces[i][j].newPos();
+			spaces[i][j].update();
+		}
+	}
+	//enemy.newPos();
+	//enemy.update;
+    player.newPos();
+    player.update();
+}
+
+function clicked(event) {
+	var x = parseInt(event.clientX/64);
+	var y = parseInt(event.clientY/64);
+
+	if (!selected && x == getPlayerX() && y == getPlayerY()) {
+		getSquareById("" + x + "," + y).image.src = getImage(x,y,1);
+		selected = true;
+		highlightMoveable(x,y);
+	}
+
+	else if (selected && getSquareById("" + x + "," + y).moveable) {
+		player.x = x*64 + ((64-player.width)/2);
+		player.y = y*64 + ((64-player.height)/2);
+		selected = false;
+		clearMoveable();
+	}
+}
+
+function stopMoving(given) {
+	given.speedX = 0;
+    given.speedY = 0;
+}
+
+function highlightMoveable(x, y) {
+	for (var i = 0; i < 10; i++) {
+		for (var j = 0; j < 10; j++) {
+			if ((Math.abs(x-i) + Math.abs(y-j)) <= playerMovement && !(i == getPlayerX() && j == getPlayerY())) {
+				getSquareById("" + i + "," + j).image.src = getImage(i,j,2);
+				getSquareById("" + i + "," + j).moveable = true;
+			}
+		}
+	}
+}
+
+function clearMoveable() {
+	for (var i = 0; i < 10; i++) {
+		for (var j = 0; j < 10; j++) {
+			getSquareById("" + i + "," + j).image.src = getImage(i,j,0);
+			getSquareById("" + i + "," + j).moveable = false;
+		}
+	}
+}
+
+function getSquareById(given) {
+	for (var i = 0; i < 10; i++) {
+		for (var j = 0; j < 10; j++) {
+			if (spaces[i][j].id == given) {
+				return spaces[i][j];
+			}
+		}
+	}
+}
+
+function getImage(x,y,category) {
+	return terrain[category][board[x][y]];
+}
+
+function getPlayerX () {
+	return parseInt(player.x/64);
+}
+
+function getPlayerY () {
+	return parseInt(player.y/64);
+}
+</script>
+
+</body>
+</html>
