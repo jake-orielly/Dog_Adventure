@@ -23,14 +23,19 @@ var playerMovement = 3;
 var selected = false;
 var grassMoveablePic = "grassMoveable.png";
 var board = [];
-
+var squareSize = 62;
+var background;
 var terrainDefault = ["grass.png", "trees.png"];
 var terrainSelected = ["grassSelected.png", "treesSelected.png"];
 var terrainMoveable = ["grassMoveable.png", "treesMoveable.png"];
 var terrain = [terrainDefault, terrainSelected, terrainMoveable];
+var selectedHighlight;
+var moveableHighlights = []; 
 
 function startGame() {
+	background = new component(boardX, boardY, "black", 0, 0, "background");
 	player = new component(50, 50, "pepper.png", 0 + ((64-50)/2), 0 + ((64-50)/2), "player");
+	selectedHighlight = new component(66, 66, "yellow", -100, -100, "selectedHighlight");
 	//enemy = new component(500, 500, "pepper.png", 0 + ((64-50)/2), 0 + ((64-50)/2), "enemy");
 	
 	mapTerrain();
@@ -38,15 +43,7 @@ function startGame() {
 	for (var i = 0; i < 10; i++) {
 		spaces[i] = [];
 		for (var j = 0; j < 10; j++) {
-			//if (i + j > 3 && i + j < 6) {
 				spaces[i][j] = generateSpace(i,j);
-			/*
-				spaces[i][j] = new component(64, 64, "trees.png", 64*i, 64*j, "" + i + "," + j);
-			}
-			
-			else {
-				spaces[i][j] = new component(64, 64, "grass.png", 64*i, 64*j, "" + i + "," + j);
-			}*/
 		}
 	}
 	
@@ -75,8 +72,7 @@ function mapTerrain() {
 
 function generateSpace (x,y) {
 	var image = getImage(x,y,0);
-	
-	var space = new component(64, 64, image, 64*x, 64*y, "" + x + "," + y);
+	var space = new component(squareSize, squareSize, image, 64*x, 64*y, "" + x + "," + y);
 	return space;
 }
 
@@ -110,10 +106,18 @@ function component(width, height, color, x, y, id) {
 	
     this.update = function() {
 		ctx = gameArea.context;
-		ctx.drawImage(this.image, 
-		this.x, 
-		this.y,
-		this.width, this.height);
+		
+		if (color.substring(color.length-4) != ".png") { 
+			ctx.fillStyle = color;
+			ctx.fillRect(this.x, this.y, this.width, this.height);
+		}
+		
+		else {
+			ctx.drawImage(this.image, 
+			this.x, 
+			this.y,
+			this.width, this.height);
+		}
     }
 	
     this.newPos = function() {
@@ -130,12 +134,23 @@ function updateGameArea() {
 		movedCount--;
 	}
 	
+	background.update();
+	
+	if (selected) {
+		selectedHighlight.update();
+	}
+	
+	for (var i = 0; i < moveableHighlights.length; i++) {
+			moveableHighlights[i].update();
+	}
+	
 	for (var i = 0; i < 10; i++) {
 		for (var j = 0; j < 10; j++) {
 			spaces[i][j].newPos();
 			spaces[i][j].update();
 		}
 	}
+	
 	//enemy.newPos();
 	//enemy.update;
     player.newPos();
@@ -147,7 +162,8 @@ function clicked(event) {
 	var y = parseInt(event.clientY/64);
 
 	if (!selected && x == getPlayerX() && y == getPlayerY()) {
-		getSquareById("" + x + "," + y).image.src = getImage(x,y,1);
+		selectedHighlight.x = x*64 -2;
+		selectedHighlight.y = y*64 -2;
 		selected = true;
 		highlightMoveable(x,y);
 	}
@@ -169,8 +185,9 @@ function highlightMoveable(x, y) {
 	for (var i = 0; i < 10; i++) {
 		for (var j = 0; j < 10; j++) {
 			if ((Math.abs(x-i) + Math.abs(y-j)) <= playerMovement && !(i == getPlayerX() && j == getPlayerY())) {
-				getSquareById("" + i + "," + j).image.src = getImage(i,j,2);
-				getSquareById("" + i + "," + j).moveable = true;
+				moveableHighlights[moveableHighlights.length] = new component(66, 66, "blue", i*64-2, j*64-2, "selectedHighlight");
+				//getSquareById("" + i + "," + j).image.src = getImage(i,j,2);
+				//getSquareById("" + i + "," + j).moveable = true;
 			}
 		}
 	}
